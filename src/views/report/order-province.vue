@@ -1,47 +1,40 @@
 <template>
   <div class="app-container">
-    <div class="header-wrapper">
+    <div class="header-wrapper card">
       <div class="header">
         <span class="tips">订单省份分布情况</span>
       </div>
 
-      <div class="condition-box">
-        <el-row>
-          <el-col :span="4">
-            <div class="condition-label">
-              公司名称
-            </div>
-          </el-col>
-          <el-col :span="20">
-            <div class="company-box">
-              <el-checkbox-group v-model="checkList" />
-            </div>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :span="4">
-            <div class="condition-label">
-              时间范畴
-            </div>
-          </el-col>
-          <el-col :span="20">
-            <div class="date-box">
-              公司名称
-            </div>
-          </el-col>
-        </el-row>
-      </div>
+      <el-row class="condition-box">
+        <el-col :span="4">
+          <div class="condition-label condition-company">
+            公司名称
+          </div>
+        </el-col>
+        <el-col :span="20">
+          <el-checkbox-group v-model="provinceData.form.company" class="company-box">
+            <el-checkbox v-for="(company, index) in companyList" :key="index" :label="company">{{ company }}</el-checkbox>
+          </el-checkbox-group>
+        </el-col>
+      </el-row>
+      <el-row class="condition-box">
+        <el-col :span="4">
+          <div class="condition-label condition-date">
+            时间范畴
+          </div>
+        </el-col>
+        <el-col :span="20">
+          <div class="date-box">
+            <date-picker v-model="provinceData.form.date"/>
+          </div>
+        </el-col>
+      </el-row>
 
     </div>
     <el-row :gutter="20" style="margin-top: 20px">
       <el-col :span="8">
-        <div class="table-box">
-          <el-table
-            :data="provinceDataList1"
-            highlight-current-row
-            size="mini"
-            :header-cell-style="{background:'#F8F9FA',color: '#505D69'}"
-          >
+        <div class="table-box card">
+          <com-table :list="provinceDataList1">
             <el-table-column label="排序" align="center" width="60">
               <template slot-scope="{row}">
                 <span>{{ row.rank }}</span>
@@ -67,16 +60,13 @@
                 <span>{{ row.scale ? row.scale * 100 : '' }}</span>
               </template>
             </el-table-column>
-          </el-table>
+          </com-table>
         </div>
       </el-col>
       <el-col :span="8">
-        <div class="table-box">
-          <el-table
-            :data="provinceDataList2"
-            highlight-current-row
-            size="mini"
-            :header-cell-style="{background:'#F8F9FA',color: '#505D69'}"
+        <div class="table-box card">
+          <com-table
+            :list="provinceDataList2"
           >
             <el-table-column label="排序" align="center" width="60">
               <template slot-scope="{row}">
@@ -103,17 +93,13 @@
                 <span>{{ row.scale ? row.scale * 100 : '' }}</span>
               </template>
             </el-table-column>
-          </el-table>
+          </com-table>
         </div>
       </el-col>
       <el-col :span="8">
-        <div class="table-box">
-          <el-table
-            :data="provinceDataList3"
-            highlight-current-row
-            size="mini"
-            fit
-            :header-cell-style="{background:'#F8F9FA',color: '#505D69'}"
+        <div class="table-box card">
+          <com-table
+            :list="provinceDataList3"
           >
             <el-table-column label="排序" align="center" width="60">
               <template slot-scope="{row}">
@@ -140,7 +126,7 @@
                 <span>{{ row.scale ? row.scale * 100 : '' }}</span>
               </template>
             </el-table-column>
-          </el-table>
+          </com-table>
         </div>
       </el-col>
     </el-row>
@@ -150,9 +136,12 @@
 <script>
 import { mapActions } from 'vuex'
 import { add } from '@/utils'
+import DatePicker from '@/components/DatePicker/index'
+import ComTable from '@/components/ComTable/index'
 
 export default {
   name: 'OrderProvince',
+  components: { DatePicker, ComTable },
   data() {
     return {
       loader: {
@@ -163,6 +152,7 @@ export default {
         '北京市', '天津市', '河北省', '山西省', '内蒙古自治区', '辽宁省', '吉林省', '黑龙江省', '上海市', '江苏省', '浙江省',
         '安徽省', '福建省', '江西省', '山东省', '河南省', '湖北省', '湖南省', '广东省', '广西省', '海南省', '重庆市',
         '四川省', '贵州省', '云南省', '西藏省', '陕西省', '甘肃省', '青海省', '宁夏省', '新疆省', '香港市', '澳门市'],
+      checkedBox: [],
       provinceData: {
         pagination: {
           total: 0,
@@ -172,7 +162,7 @@ export default {
         list: [],
         form: {
           date: [],
-          company: ''
+          company: []
         }
       }
     }
@@ -286,7 +276,7 @@ export default {
   },
   mounted() {
     this.getCompanyList()
-    this.getOrderProvinceList()
+    // this.getOrderProvinceList()
   },
   methods: {
     ...mapActions('report', ['getOrderProvinceListX', 'getCompanyListX']),
@@ -294,7 +284,6 @@ export default {
       const { data } = await this.getCompanyListX()
       this.companyList = data
       if (data.length > 0) {
-        this.provinceData.form.company = data[0]
         this.getOrderProvinceList()
       }
     },
@@ -304,7 +293,7 @@ export default {
       const params = {
         per_page: this.provinceData.pagination.pageSize,
         current_page: this.provinceData.pagination.curPage,
-        company: this.provinceData.form.company
+        company: this.companyList[0]
       }
 
       let start_time
@@ -384,13 +373,74 @@ export default {
     }
   }
 
+  ::v-deep .el-checkbox {
+    margin-right: 30px;
+    color: #343A40;
+
+    .el-checkbox__input {
+      display: none;
+    }
+
+    .el-checkbox__label {
+      font-size: 18px;
+      font-weight: 400;
+      height: 40px;
+      line-height: 40px;
+      padding: 0;
+    }
+  }
+
   .header-wrapper {
     background: white;
     padding: 26px 16px 53px;
 
     .condition-box {
       background: #F8F9FA;
-      border-radius: 10px;
+      display: flex;
+
+      &:nth-child(2){
+        border-bottom: 1px solid #D8DEE5;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+      }
+
+      &:nth-child(3){
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+      }
+
+      el-col {
+        flex: 1;
+      }
+
+      .condition-label {
+        background: #ECF5FF;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #343A40;
+        font-size: 18px;
+        font-weight: bold;
+
+        &.condition-company {
+          border-top-left-radius: 10px;
+        }
+
+        &.condition-date {
+          border-bottom-left-radius: 10px;
+        }
+
+      }
+
+      .company-box {
+        padding: 40px 43px 34px;
+      }
+
+      .date-box {
+        padding: 20px 43px 24px;
+      }
+
     }
 
   }
