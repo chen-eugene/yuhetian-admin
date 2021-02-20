@@ -1,4 +1,4 @@
-import { asyncRoutes, constantRoutes } from '@/router'
+import { dynamicRoutes, constantRoutes } from '@/router'
 
 /**
  * Use meta.role to determine if the current user has permission
@@ -18,19 +18,36 @@ function hasPermission(roles, route) {
  * @param routes asyncRoutes
  * @param roles
  */
-export function filterAsyncRoutes(routes, roles) {
-  const res = []
+export function filterAsyncRoutes(routes, role) {
+  if (role === 1) {
+    return routes
+  }
 
+  const res = []
   routes.forEach(route => {
     const tmp = { ...route }
-    if (hasPermission(roles, tmp)) {
-      if (tmp.children) {
-        tmp.children = filterAsyncRoutes(tmp.children, roles)
-      }
-      res.push(tmp)
-    }
+
+    console.log('tempRoute -->', tmp)
+    // if (hasPermission(roles, tmp)) {
+    //   if (tmp.children) {
+    //     tmp.children = filterAsyncRoutes(tmp.children, roles)
+    //   }
+    //   res.push(tmp)
+    // }
   })
 
+  return res
+}
+
+export function mapFunctionRoute(routes, functionList) {
+  const res = []
+  routes.forEach(route => {
+    functionList.forEach(item => {
+      if (item.fid === route.key) {
+        res.push(route)
+      }
+    })
+  })
   return res
 }
 
@@ -47,13 +64,14 @@ const mutations = {
 }
 
 const actions = {
-  generateRoutes({ commit }, roles) {
+  generateRoutesX({ commit }, payload) {
+    const { role, functionList } = payload
     return new Promise(resolve => {
       let accessedRoutes
-      if (roles.includes('admin')) {
-        accessedRoutes = asyncRoutes || []
+      if (role === 1) {
+        accessedRoutes = dynamicRoutes || []
       } else {
-        accessedRoutes = filterAsyncRoutes(asyncRoutes, roles)
+        accessedRoutes = mapFunctionRoute(dynamicRoutes, functionList)
       }
       commit('SET_ROUTES', accessedRoutes)
       resolve(accessedRoutes)

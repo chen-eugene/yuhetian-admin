@@ -1,6 +1,4 @@
-/**
- * Created by PanJiaChen on 16/11/18.
- */
+import { formatDate } from '../filters/index'
 
 /**
  * Parse the time to string
@@ -95,41 +93,6 @@ export function formatTime(time, option) {
 }
 
 /**
- * @param {string} url
- * @returns {Object}
- */
-export function getQueryObject(url) {
-  url = url == null ? window.location.href : url
-  const search = url.substring(url.lastIndexOf('?') + 1)
-  const obj = {}
-  const reg = /([^?&=]+)=([^?&=]*)/g
-  search.replace(reg, (rs, $1, $2) => {
-    const name = decodeURIComponent($1)
-    let val = decodeURIComponent($2)
-    val = String(val)
-    obj[name] = val
-    return rs
-  })
-  return obj
-}
-
-/**
- * @param {string} input value
- * @returns {number} output value
- */
-export function byteLength(str) {
-  // returns the byte length of an utf8 string
-  let s = str.length
-  for (var i = str.length - 1; i >= 0; i--) {
-    const code = str.charCodeAt(i)
-    if (code > 0x7f && code <= 0x7ff) s++
-    else if (code > 0x7ff && code <= 0xffff) s += 2
-    if (code >= 0xDC00 && code <= 0xDFFF) i--
-  }
-  return s
-}
-
-/**
  * @param {Array} actual
  * @returns {Array}
  */
@@ -180,16 +143,6 @@ export function param2Obj(url) {
 }
 
 /**
- * @param {string} val
- * @returns {string}
- */
-export function html2Text(val) {
-  const div = document.createElement('div')
-  div.innerHTML = val
-  return div.textContent || div.innerText
-}
-
-/**
  * Merges two objects, giving the last one precedence
  * @param {Object} target
  * @param {(Object|Array)} source
@@ -211,26 +164,6 @@ export function objectMerge(target, source) {
     }
   })
   return target
-}
-
-/**
- * @param {HTMLElement} element
- * @param {string} className
- */
-export function toggleClass(element, className) {
-  if (!element || !className) {
-    return
-  }
-  let classString = element.className
-  const nameIndex = classString.indexOf(className)
-  if (nameIndex === -1) {
-    classString += '' + className
-  } else {
-    classString =
-      classString.substr(0, nameIndex) +
-      classString.substr(nameIndex + className.length)
-  }
-  element.className = classString
 }
 
 /**
@@ -308,50 +241,34 @@ export function deepClone(source) {
   return targetObj
 }
 
-/**
- * @param {Array} arr
- * @returns {Array}
- */
-export function uniqueArr(arr) {
-  return Array.from(new Set(arr))
+export function add(num1, num2) {
+  const num1Digits = (num1.toString().split('.')[1] || '').length
+  const num2Digits = (num2.toString().split('.')[1] || '').length
+  const baseNum = Math.pow(10, Math.max(num1Digits, num2Digits))
+  return (num1 * baseNum + num2 * baseNum) / baseNum
 }
 
-/**
- * @returns {string}
- */
-export function createUniqueString() {
-  const timestamp = +new Date() + ''
-  const randomNum = parseInt((1 + Math.random()) * 65536) + ''
-  return (+(randomNum + timestamp)).toString(32)
+export function getTargetDate(day) {
+  const date = new Date()
+  date.setDate(date.getDate() + day)
+  return `${formatDate(date, 'YYYY-MM-DD')} 00:00:00`
 }
 
-/**
- * Check if an element has a class
- * @param {HTMLElement} elm
- * @param {string} cls
- * @returns {boolean}
- */
-export function hasClass(ele, cls) {
-  return !!ele.className.match(new RegExp('(\\s|^)' + cls + '(\\s|$)'))
+export function monthStartDay(date) {
+  const dateTemp = new Date(date)
+  dateTemp.setDate(1)
+  return `${formatDate(dateTemp, 'YYYY-MM-DD')} 00:00:00`
 }
 
-/**
- * Add class to element
- * @param {HTMLElement} elm
- * @param {string} cls
- */
-export function addClass(ele, cls) {
-  if (!hasClass(ele, cls)) ele.className += ' ' + cls
+export function monthEndDay(date) {
+  const dateTemp = new Date(date)
+  dateTemp.setDate(1)
+  dateTemp.setMonth(dateTemp.getMonth() + 1)
+  dateTemp.setDate(dateTemp.getDate() - 1)
+  return `${formatDate(dateTemp, 'YYYY-MM-DD')} 23:59:59`
 }
 
-/**
- * Remove class from element
- * @param {HTMLElement} elm
- * @param {string} cls
- */
-export function removeClass(ele, cls) {
-  if (hasClass(ele, cls)) {
-    const reg = new RegExp('(\\s|^)' + cls + '(\\s|$)')
-    ele.className = ele.className.replace(reg, ' ')
-  }
+export function isNumber(value) {
+  const re = /^[\d]+$/
+  return re.test(value)
 }

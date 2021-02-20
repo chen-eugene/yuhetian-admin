@@ -1,125 +1,187 @@
-import { login, logout, getInfo } from '@/api/user'
-import { getToken, setToken, removeToken } from '@/utils/auth'
-import router, { resetRouter } from '@/router'
+import { getToken, setToken, setUid, clearCookie } from '@/utils/auth'
+import { resetRouter } from '@/router'
+import request from '@/utils/request'
 
 const state = {
   token: getToken(),
+  uid: '',
+  role: -1, // 1 管理员  0 普通账号
   name: '',
   avatar: '',
   introduction: '',
-  roles: []
+  function_list: [],
+  userInfo: null
 }
 
 const mutations = {
   SET_TOKEN: (state, token) => {
     state.token = token
   },
-  SET_INTRODUCTION: (state, introduction) => {
-    state.introduction = introduction
+  SET_USER_INFO: (state, userInfo) => {
+    state.userInfo = userInfo
+  },
+  SET_ROLE: (state, role) => {
+    state.role = role
+  },
+  SET_UID: (state, uid) => {
+    state.uid = uid
   },
   SET_NAME: (state, name) => {
     state.name = name
   },
-  SET_AVATAR: (state, avatar) => {
-    state.avatar = avatar
-  },
-  SET_ROLES: (state, roles) => {
-    state.roles = roles
+  SET_FUNCTION_LIST: (state, list) => {
+    state.function_list = list
   }
 }
 
 const actions = {
   // user login
-  login({ commit }, userInfo) {
+  async login({ commit }, userInfo) {
     const { username, password } = userInfo
-    return new Promise((resolve, reject) => {
-      login({ username: username.trim(), password: password }).then(response => {
-        const { data } = response
-        commit('SET_TOKEN', data.token)
-        setToken(data.token)
-        resolve()
-      }).catch(error => {
-        reject(error)
-      })
-    })
+
+    const [response, err] = await request({
+      url: '/user/login',
+      method: 'post',
+      data: {
+        user_name: username.trim(),
+        user_password: password
+      }
+    }).then(response => [response, null]).catch(err => [null, err])
+
+    if (response) {
+      const { data } = response
+      commit('SET_UID', data.uid)
+      const token = data.token
+      setToken(token)
+      setUid(data.uid)
+      return Promise.resolve()
+    } else {
+      return Promise.reject(err)
+    }
   },
 
   // get user info
-  getInfo({ commit, state }) {
-    return new Promise((resolve, reject) => {
-      getInfo(state.token).then(response => {
-        const { data } = response
+  async getUserInfoX({ commit }, uid) {
+    const [response, err] = await request({
+      url: `/user/${uid}`,
+      method: 'get'
+    }).then(response => [response, null]).catch(err => [null, err])
 
-        if (!data) {
-          reject('Verification failed, please Login again.')
-        }
+    if (response) {
+      const { data } = response
 
-        const { roles, name, avatar, introduction } = data
+      if (!data) {
+        return Promise.reject('请先登录')
+      }
 
-        // roles must be a non-empty array
-        if (!roles || roles.length <= 0) {
-          reject('getInfo: roles must be a non-null array!')
-        }
-
-        commit('SET_ROLES', roles)
-        commit('SET_NAME', name)
-        commit('SET_AVATAR', avatar)
-        commit('SET_INTRODUCTION', introduction)
-        resolve(data)
-      }).catch(error => {
-        reject(error)
-      })
-    })
+      const { role_id, name, function_list } = data
+      commit('SET_USER_INFO', data)
+      commit('SET_ROLE', role_id)
+      commit('SET_NAME', name)
+      commit('SET_FUNCTION_LIST', function_list)
+      return Promise.resolve(data)
+    } else {
+      return Promise.reject(err)
+    }
   },
 
   // user logout
   logout({ commit, state, dispatch }) {
     return new Promise((resolve, reject) => {
-      logout(state.token).then(() => {
+      try {
         commit('SET_TOKEN', '')
-        commit('SET_ROLES', [])
-        removeToken()
+        commit('SET_ROLE', -1)
+        clearCookie()
         resetRouter()
-
-        // reset visited views and cached views
-        // to fixed https://github.com/PanJiaChen/vue-element-admin/issues/2485
         dispatch('tagsView/delAllViews', null, { root: true })
-
         resolve()
-      }).catch(error => {
-        reject(error)
-      })
+      } catch (e) {
+        reject(e)
+      }
     })
   },
 
-  // remove token
-  resetToken({ commit }) {
+  getUserListX() {
+    return request({
+      url: `/user`,
+      method: 'get'
+    })
+  },
+
+  addUserX({ commit }, data) {
+    return request.post('/user', data)
+  },
+
+  updateUserX({ commit }, data) {
+    return request.put(`/user/${data.uid}`, data)
+  },
+
+  resetTokenX({ commit }) {
     return new Promise(resolve => {
       commit('SET_TOKEN', '')
-      commit('SET_ROLES', [])
-      removeToken()
+      commit('SET_ROLE', -1)
+      clearCookie()
       resolve()
     })
   },
 
-  // dynamically modify permissions
-  async changeRoles({ commit, dispatch }, role) {
-    const token = role + '-token'
+  queryIpX({ commit }) {
+    return request({
+      url: `user/ip`,
+      method: 'get'
+    })
+  },
 
-    commit('SET_TOKEN', token)
-    setToken(token)
+  changePasswordX({ commit }, data) {
+    return request({
+      url: `user/password`,
+      method: 'put',
+      data
+    })
+  },
 
-    const { roles } = await dispatch('getInfo')
+  // 获取菜单列表
+  getMenuListX({ commit }, params) {
+    return request({
+      url: `menu/uri`,
+      method: 'get',
+      params
+    })
+  },
 
-    resetRouter()
+  // 保存菜单
+  addMenuX({ commit }, data) {
+    return request({
+      url: `menu/uri`,
+      method: 'post',
+      data
+    })
+  },
 
-    // generate accessible routes map based on roles
-    const accessRoutes = await dispatch('permission/generateRoutes', roles, { root: true })
-    // dynamically add accessible routes
-    router.addRoutes(accessRoutes)
+  // 修改菜单
+  updateMenuX({ commit }, payload) {
+    return request({
+      url: `menu/uri/${payload.menuId}`,
+      method: 'put',
+      data: payload.data
+    })
+  },
 
-    // reset visited views and cached views
-    dispatch('tagsView/delAllViews', null, { root: true })
+  // 删除菜单
+  deleteMenuX({ commit }, params) {
+    return request({
+      url: `menu/uri/${params.menuId}`,
+      method: 'delete'
+    })
+  },
+
+  // 获取登录历史
+  getUserHistoryX({ commit }, params) {
+    return request({
+      url: `user/history`,
+      method: 'get',
+      params
+    })
   }
 }
 

@@ -36,7 +36,15 @@ module.exports = {
       warnings: false,
       errors: true
     },
-    before: require('./mock/mock-server.js')
+    // before: require('./mock/mock-server.js'),
+    proxy: {
+      '/dev-api': {
+        target: 'http://123.57.68.9:8000',
+        // target: 'http://yhtdevadmin.qianya.tech',
+        changeOrigin: true,
+        pathRewrite: { '^/dev-api': '' }
+      }
+    }
   },
   configureWebpack: {
     // provide the app's title in webpack's name field, so that
@@ -78,6 +86,14 @@ module.exports = {
       .loader('svg-sprite-loader')
       .options({
         symbolId: 'icon-[name]'
+      })
+      .end()
+    config.module
+      .rule('vue')
+      .use('vue-loader')
+      .loader('vue-loader')
+      .tap(options => {
+        return options
       })
       .end()
 
